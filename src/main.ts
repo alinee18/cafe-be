@@ -8,9 +8,23 @@ import { AppModule } from './app.module';
 
 import { AuthService } from './auth/auth.service';
 
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+
 async function bootstrap() {
   const app =
     await NestFactory.create(AppModule);
+
+  // =========================
+  // SWAGGER CONFIGURATION
+  // =========================
+  const config = new DocumentBuilder()
+    .setTitle('Cafe Backend API')
+    .setDescription('The Cafe Management System API description')
+    .setVersion('1.0')
+    .addBearerAuth() // Memungkinkan testing endpoint yang diproteksi JWT
+    .build();
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/docs', app, document);
 
   // =========================
   // GLOBAL PREFIX
