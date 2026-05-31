@@ -15,6 +15,11 @@ async function bootstrap() {
     await NestFactory.create(AppModule);
 
   // =========================
+  // GLOBAL PREFIX
+  // =========================
+  app.setGlobalPrefix('api');
+
+  // =========================
   // SWAGGER CONFIGURATION
   // =========================
   const config = new DocumentBuilder()
@@ -24,12 +29,7 @@ async function bootstrap() {
     .addBearerAuth() // Memungkinkan testing endpoint yang diproteksi JWT
     .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
-
-  // =========================
-  // GLOBAL PREFIX
-  // =========================
-  app.setGlobalPrefix('api');
+  SwaggerModule.setup('docs', app, document);
 
   // =========================
   // CORS
