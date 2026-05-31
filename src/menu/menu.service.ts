@@ -45,29 +45,27 @@ export class MenuService {
   // =========================
   // GET ALL MENU
   // =========================
-  async findAll() {
-    try {
-      const menus = await this.prisma.menu.findMany({
-        include: {
-          category: true, // 🔥 biar keluar nama category
-        },
-        orderBy: {
-          id: 'desc',
-        },
-      });
+ async findAll() {
+  try {
+    const menus = await this.prisma.menu.findMany({
+      include: {
+        category: true,
+      },
+      orderBy: {
+        id: 'desc',
+      },
+    });
 
-      return {
-        success: true,
-        message: 'Data menu berhasil diambil',
-        data: menus,
-      };
-    } catch (error) {
-      throw new InternalServerErrorException({
-        success: false,
-        message: 'Terjadi kesalahan saat mengambil data menu',
-      });
-    }
+    return {
+      success: true,
+      message: 'Data menu berhasil diambil',
+      data: menus,
+    };
+  } catch (error) {
+    console.error(error);
+    throw error;
   }
+}
 
   // =========================
   // GET MENU BY ID
