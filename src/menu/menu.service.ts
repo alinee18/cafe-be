@@ -46,25 +46,12 @@ export class MenuService {
   // GET ALL MENU
   // =========================
  async findAll() {
-  try {
-    const menus = await this.prisma.menu.findMany({
-      include: {
-        category: true,
-      },
-      orderBy: {
-        id: 'desc',
-      },
-    });
+  const menus = await this.prisma.menu.findMany();
 
-    return {
-      success: true,
-      message: 'Data menu berhasil diambil',
-      data: menus,
-    };
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
+  return {
+    success: true,
+    data: menus,
+  };
 }
 
   // =========================
