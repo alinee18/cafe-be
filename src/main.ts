@@ -52,24 +52,6 @@ async function bootstrap() {
   );
 
   // =========================
-  // CREATE DEFAULT ADMINS
-  // =========================
-  try {
-    const authService =
-      app.get(AuthService);
-
-    await authService.createAdmin();
-
-    console.log(
-      'Default admin berhasil dibuat',
-    );
-  } catch (error) {
-    console.log(
-      'Admin sudah ada atau gagal dibuat',
-    );
-  }
-
-  // =========================
   // PORT
   // =========================
   const PORT =
@@ -80,6 +62,15 @@ async function bootstrap() {
   console.log(
     `Application running on port ${PORT}`,
   );
+
+  // =========================
+  // CREATE DEFAULT ADMINS
+  // JALANKAN SETELAH LISTEN AGAR TIDAK BLOCKING STARTUP
+  // =========================
+  const authService = app.get(AuthService);
+  authService.createAdmin()
+    .then(() => console.log('Proses pengecekan default admin selesai'))
+    .catch((error) => console.log('Gagal menjalankan createAdmin startup:', error));
 }
 
 bootstrap();
