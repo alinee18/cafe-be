@@ -1,51 +1,42 @@
-import {
-  ValidationPipe,
-} from '@nestjs/common';
-
+import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-
 import { AppModule } from './app.module';
-
 import { AuthService } from './auth/auth.service';
-
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
-  console.log('Aplikasi mulai bootstrap...');
-  
   const app = await NestFactory.create(AppModule);
-  console.log('NestFactory berhasil dibuat');
 
   // =========================
   // GLOBAL PREFIX
   // =========================
+  // Pastikan rute utama menggunakan prefix 'api'
   app.setGlobalPrefix('api');
-  console.log('Global prefix set to /api');
 
   // =========================
   // SWAGGER CONFIGURATION
   // =========================
-  try {
-    const config = new DocumentBuilder()
-      .setTitle('Cafe Backend API')
-      .setDescription('The Cafe Management System API description')
-      .setVersion('1.0')
-      .addBearerAuth()
-      .build();
-    const document = SwaggerModule.createDocument(app, config);
-    SwaggerModule.setup('docs', app, document);
-    console.log('Swagger berhasil dikonfigurasi di /docs');
-  } catch (e) {
-    console.log('Error saat setup Swagger:', e.message);
-  }
+  const config = new DocumentBuilder()
+    .setTitle('Cafe Backend API')
+    .setDescription('The Cafe Management System API description')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+  
+  const document = SwaggerModule.createDocument(app, config);
+  
+  // Perbaikan: Tambahkan opsi agar Swagger tidak ikut terkena prefix /api jika diakses di /docs
+  SwaggerModule.setup('docs', app, document, {
+    useGlobalPrefix: false, 
+  });
 
   // =========================
   // CORS
   // =========================
   app.enableCors({
     origin: '*',
+    credentials: true,
   });
-  console.log('CORS diaktifkan');
 
   // =========================
   // VALIDATION
@@ -57,29 +48,25 @@ async function bootstrap() {
       transform: true,
     }),
   );
-  console.log('Validation Pipe diaktifkan');
 
   // =========================
-  // PORT
+  // PORT (Tahan Banting untuk Railway)
   // =========================
-  const PORT = process.env.PORT || 3000;
-  console.log(`Mencoba listen di port: ${PORT}`);
+  // Railway mengirimkan PORT berupa string, kita paksa parsing ke integer base 10
+  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
-  try {
-    await app.listen(PORT, '0.0.0.0');
-    console.log(`🚀 Application running on port ${PORT}`);
-  } catch (e) {
-    console.log('FATAL ERROR saat app.listen:', e.message);
-  }
+  // Wajib bind ke '0.0.0.0' agar proxy internal Railway bisa memetakan port kontainer
+  await app.listen(PORT, '0.0.0.0');
+
+  console.log(`🚀 Application is successfully listening on host 0.0.0.0 and port ${PORT}`);
 
   // =========================
   // CREATE DEFAULT ADMINS
   // =========================
-  console.log('Menjalankan pengecekan admin di background...');
   const authService = app.get(AuthService);
   authService.createAdmin()
-    .then(() => console.log('✅ Proses default admin selesai'))
-    .catch((error) => console.log('❌ Gagal createAdmin:', error.message));
+    .then(() => console.log('✅ Proses pengecekan default admin selesai'))
+    .catch((error) => console.log('❌ Gagal menjalankan createAdmin startup:', error));
 }
 
-bootstrap().catch(err => console.log('BOOTSTRAP ERROR:', err.message));
+bootstrap();
