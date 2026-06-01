@@ -87,6 +87,9 @@ model Order {
   orderItems OrderItem[]
 
   payment Payment?
+
+  reservationId Int?         
+  reservation   Reservation? @relation(fields: [reservationId], references: [id])
 }
 //
 // =========================
@@ -127,6 +130,9 @@ model Reservation {
   user  User  @relation(fields: [userId], references: [id])
   table Table @relation(fields: [tableId], references: [id])
 
+  // 🎯 DISINI TEMPATNYA YANG BENAR!
+  orders Order[]
+
   @@index([tableId, date])
 }
 
@@ -140,11 +146,11 @@ model Category {
 model Payment {
   id      Int       @id @default(autoincrement())
   orderId Int       @unique
-  method  String // QRIS / CASH
+  method  String    // QRIS / CASH
   amount  Int
   status  String    @default("PENDING")
   paidAt  DateTime?
 
-  order Order @relation(fields: [orderId], references: [id])
+  order Order @relation(fields: [orderId], references: [id]) // 🟢 Biarkan ini sendirian, jangan ada 'orders Order[]' di bawahnya!
 }
 
