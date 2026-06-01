@@ -2,8 +2,8 @@ import {
   Injectable,
   BadRequestException,
   NotFoundException,
+  InternalServerErrorException,
 } from '@nestjs/common';
-
 import { PrismaService } from '../prisma/prisma.service';
 import { OrderStatus } from '@prisma/client';
 
@@ -11,191 +11,269 @@ import { OrderStatus } from '@prisma/client';
 export class OrderService {
   constructor(private prisma: PrismaService) {}
 
-  // =========================
-  // CREATE ORDER
-  // =========================
+  // =========================================================
+  // 1. CREATE ORDER (Logika Kondisional Reservasi vs Di Tempat)
+  // =========================================================
   async createOrder(
     userId: number,
     items: { menuId: number; qty: number }[],
+    reservationId?: number, // Bersifat opsional (Hanya dikirim jika memesan lewat web)
   ) {
-    if (!items || items.length === 0) {
-      throw new BadRequestException('Items tidak boleh kosong');
-    }
-
-    let totalPrice = 0;
-
-    const orderItemsData: {
-      menuId: number;
-      qty: number;
-      subtotal: number;
-    }[] = [];
-
-    for (const item of items) {
-      const menu = await this.prisma.menu.findUnique({
-        where: { id: item.menuId },
-      });
-
-      if (!menu) {
-        throw new NotFoundException(`Menu id ${item.menuId} tidak ditemukan`);
+    try {
+      // Validasi awal: Pastikan ada makanan/minuman yang dipilih
+      if (!items || items.length === 0) {
+        throw new BadRequestException({
+          success: false,
+          message: 'Kamu belum memilih menu makanan atau minuman sama sekali.',
+        });
       }
 
-      const subtotal = menu.price * item.qty;
-      totalPrice += subtotal;
+      let totalPrice = 0;
+      const orderItemsData: { menuId: number; qty: number; subtotal: number }[] = [];
 
-      orderItemsData.push({
-        menuId: item.menuId,
-        qty: item.qty,
-        subtotal,
+      // Loop untuk menghitung total harga berdasarkan data asli di database
+      for (const item of items) {
+        const menu = await this.prisma.menu.findUnique({
+          where: { id: item.menuId },
+        });
+
+        if (!menu) {
+          throw new NotFoundException({
+            success: false,
+            message: `Menu pilihanmu dengan ID ${item.menuId} tidak ditemukan di sistem kami.`,
+          });
+        }
+
+        const subtotal = menu.price * item.qty;
+        totalPrice += subtotal;
+
+        orderItemsData.push({
+          menuId: item.menuId,
+          qty: item.qty,
+          subtotal,
+        });
+      }
+
+      // 🧠 KONDISI UTAMA: Cek jika transaksi ini berasal dari RESERVASI WEB
+      if (reservationId) {
+        // Pastikan ID Reservasi mejanya memang valid dan ada di database
+        const checkReservation = await this.prisma.reservation.findUnique({
+          where: { id: reservationId },
+        });
+
+        if (!checkReservation) {
+          throw new NotFoundException({
+            success: false,
+            message: 'Data reservasi meja Anda tidak ditemukan atau sudah tidak aktif.',
+          });
+        }
+
+        // Terapkan aturan minimal Rp50.000 khusus untuk Reservasi Web
+        if (totalPrice < 50000) {
+          throw new BadRequestException({
+            success: false,
+            message: `Total pesananmu baru Rp${totalPrice.toLocaleString('id-ID')}. Khusus pemesanan melalui reservasi meja web, minimal pemesanan menu adalah Rp50.000.`,
+          });
+        }
+      }
+
+      // Jika lolos pengecekan (atau jika pesan langsung di tempat tanpa reservationId)
+      const order = await this.prisma.order.create({
+        data: {
+          userId,
+          totalPrice,
+          status: OrderStatus.PENDING,
+          reservationId: reservationId || null, // Pasang ID reservasi jika ada, jika tidak set NULL (Dine-In)
+          orderItems: {
+            create: orderItemsData,
+          },
+        },
+        include: {
+          orderItems: {
+            include: { menu: true },
+          },
+        },
+      });
+
+      return {
+        success: true,
+        message: 'Pesanan kafe berhasil dibuat! Silakan lanjutkan ke pembayaran.',
+        data: order,
+      };
+    } catch (error) {
+      // Teruskan error bawaan jika itu adalah error validasi yang kita buat di atas
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException({
+        success: false,
+        message: 'Terjadi gangguan pada sistem saat mencoba memproses pesanan Anda.',
       });
     }
-
-    // MINIMUM ORDER
-    if (totalPrice < 50000) {
-      throw new BadRequestException('Minimum order Rp50.000');
-    }
-
-    const order = await this.prisma.order.create({
-      data: {
-        userId,
-        totalPrice,
-        status: OrderStatus.PENDING,
-
-        orderItems: {
-          create: orderItemsData,
-        },
-      },
-      include: {
-        orderItems: {
-          include: { menu: true },
-        },
-      },
-    });
-
-    return {
-      success: true,
-      message: 'Order berhasil dibuat',
-      data: order,
-    };
   }
 
-  // =========================
-  // GET MY ORDERS
-  // =========================
+  // =========================================================
+  // 2. GET MY ORDERS (Daftar Riwayat Order Milik Customer)
+  // =========================================================
   async myOrders(userId: number) {
-    const data = await this.prisma.order.findMany({
-      where: { userId },
-      include: {
-        orderItems: {
-          include: { menu: true },
+    try {
+      const data = await this.prisma.order.findMany({
+        where: { userId },
+        include: {
+          orderItems: {
+            include: { menu: true },
+          },
         },
-      },
-      orderBy: { id: 'desc' },
-    });
+        orderBy: { id: 'desc' },
+      });
 
-    return {
-      success: true,
-      message: 'Data order berhasil diambil',
-      data,
-    };
+      return {
+        success: true,
+        message: 'Data riwayat pesanan berhasil diambil.',
+        data,
+      };
+    } catch (error) {
+      throw new InternalServerErrorException({
+        success: false,
+        message: 'Gagal mengambil data riwayat pesanan Anda.',
+      });
+    }
   }
 
-  // =========================
-  // GET ALL (ADMIN)
-  // =========================
+  // =========================================================
+  // 3. GET ALL ORDERS (Khusus Dashboard Admin/Kasir)
+  // =========================================================
   async findAll() {
-    const data = await this.prisma.order.findMany({
-      include: {
-        user: true,
-        orderItems: {
-          include: { menu: true },
+    try {
+      const data = await this.prisma.order.findMany({
+        include: {
+          user: true,
+          orderItems: {
+            include: { menu: true },
+          },
         },
-      },
-      orderBy: { id: 'desc' },
-    });
+        orderBy: { id: 'desc' },
+      });
 
-    return {
-      success: true,
-      message: 'Semua order berhasil diambil',
-      data,
-    };
+      return {
+        success: true,
+        message: 'Seluruh data pesanan berhasil diambil.',
+        data,
+      };
+    } catch (error) {
+      throw new InternalServerErrorException({
+        success: false,
+        message: 'Gagal memuat seluruh data pesanan untuk admin.',
+      });
+    }
   }
 
-  // =========================
-  // UPDATE STATUS (ADMIN)
-  // =========================
+  // =========================================================
+  // 4. UPDATE STATUS ORDER (Khusus Admin: PROCESS / DONE / CANCEL)
+  // =========================================================
   async updateStatus(orderId: number, status: OrderStatus) {
-    const order = await this.prisma.order.findUnique({
-      where: { id: orderId },
-    });
+    try {
+      const order = await this.prisma.order.findUnique({
+        where: { id: orderId },
+      });
 
-    if (!order) {
-      throw new NotFoundException('Order tidak ditemukan');
+      if (!order) {
+        throw new NotFoundException({
+          success: false,
+          message: 'Data pesanan yang ingin diubah statusnya tidak ditemukan.',
+        });
+      }
+
+      const updated = await this.prisma.order.update({
+        where: { id: orderId },
+        data: { status },
+      });
+
+      return {
+        success: true,
+        message: `Status pesanan berhasil diperbarui menjadi ${status}.`,
+        data: updated,
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+      throw new InternalServerErrorException({
+        success: false,
+        message: 'Gagal memperbarui status pesanan.',
+      });
     }
-
-    const updated = await this.prisma.order.update({
-      where: { id: orderId },
-      data: { status },
-    });
-
-    return {
-      success: true,
-      message: 'Status order berhasil diupdate',
-      data: updated,
-    };
   }
 
-  // =========================
-  // PAYMENT
-  // =========================
+  // =========================================================
+  // 5. PROSES BAYAR ORDER (Mengubah status JADI PAID & catat Payment)
+  // =========================================================
   async payOrder(orderId: number, method: 'QRIS' | 'CASH') {
-    const order = await this.prisma.order.findUnique({
-      where: { id: orderId },
-    });
-
-    if (!order) {
-      throw new NotFoundException('Order tidak ditemukan');
-    }
-
-    // 1. cek payment dulu
-    const existingPayment = await this.prisma.payment.findUnique({
-      where: { orderId },
-    });
-
-    if (!existingPayment) {
-      // CREATE PAYMENT
-      await this.prisma.payment.create({
-        data: {
-          orderId,
-          method,
-          amount: order.totalPrice,
-          status: 'PAID',
-          paidAt: new Date(),
-        },
+    try {
+      const order = await this.prisma.order.findUnique({
+        where: { id: orderId },
       });
-    } else {
-      // UPDATE PAYMENT
-      await this.prisma.payment.update({
+
+      if (!order) {
+        throw new NotFoundException({
+          success: false,
+          message: 'Nomor nota pesanan (Order ID) tidak ditemukan.',
+        });
+      }
+
+      // Kunci pembayaran jika statusnya sudah lunas
+      if (order.status === OrderStatus.PAID) {
+        throw new BadRequestException({
+          success: false,
+          message: 'Pesanan ini sudah lunas, tidak bisa melakukan pembayaran ulang.',
+        });
+      }
+
+      // Cari atau buat data pembayaran (Upsert logika manual)
+      const existingPayment = await this.prisma.payment.findUnique({
         where: { orderId },
+      });
+
+      if (!existingPayment) {
+        await this.prisma.payment.create({
+          data: {
+            orderId,
+            method,
+            amount: order.totalPrice,
+            status: 'PAID',
+            paidAt: new Date(),
+          },
+        });
+      } else {
+        await this.prisma.payment.update({
+          where: { orderId },
+          data: {
+            method,
+            status: 'PAID',
+            paidAt: new Date(),
+          },
+        });
+      }
+
+      // Ubah status order utama menjadi lunas (PAID)
+      const updatedOrder = await this.prisma.order.update({
+        where: { id: orderId },
         data: {
-          method,
-          status: 'PAID',
-          paidAt: new Date(),
+          status: OrderStatus.PAID,
         },
       });
+
+      return {
+        success: true,
+        message: `Pembayaran nota #${orderId} sukses menggunakan ${method}!`,
+        data: updatedOrder,
+      };
+    } catch (error) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException({
+        success: false,
+        message: 'Terjadi kegagalan sistem saat memproses transaksi pembayaran.',
+      });
     }
-
-    // 2. UPDATE ORDER STATUS
-    const updatedOrder = await this.prisma.order.update({
-      where: { id: orderId },
-      data: {
-        status: OrderStatus.PAID,
-      },
-    });
-
-    return {
-      success: true,
-      message: 'Pembayaran berhasil',
-      data: updatedOrder,
-    };
   }
 }
