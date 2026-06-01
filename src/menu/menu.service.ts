@@ -10,7 +10,7 @@ import { UpdateMenuDto } from './dto/update-menu.dto';
 
 @Injectable()
 export class MenuService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   // =========================
   // CREATE MENU
@@ -47,24 +47,16 @@ export class MenuService {
   // =========================
   async findAll() {
     try {
-      const menus = await this.prisma.menu.findMany({
-        include: {
-          category: true, // 🔥 biar keluar nama category
-        },
-        orderBy: {
-          id: 'desc',
-        },
-      });
+      const menus = await this.prisma.menu.findMany();
 
       return {
         success: true,
-        message: 'Data menu berhasil diambil',
         data: menus,
       };
     } catch (error) {
       throw new InternalServerErrorException({
         success: false,
-        message: 'Terjadi kesalahan saat mengambil data menu',
+        message: `Terjadi kesalahan saat mengambil daftar menu: ${error}`,
       });
     }
   }
@@ -73,83 +65,83 @@ export class MenuService {
   // GET MENU BY ID
   // =========================
   async findOne(id: number) {
-    const menu = await this.prisma.menu.findUnique({
-      where: { id },
-      include: {
-        category: true,
-      },
-    });
-
-    if (!menu) {
-      throw new NotFoundException({
-        success: false,
-        message: 'Menu tidak ditemukan',
+      const menu = await this.prisma.menu.findUnique({
+        where: { id },
+        include: {
+          category: true,
+        },
       });
-    }
 
-    return {
-      success: true,
-      data: menu,
-    };
-  }
+      if (!menu) {
+        throw new NotFoundException({
+          success: false,
+          message: 'Menu tidak ditemukan',
+        });
+      }
+
+      return {
+        success: true,
+        data: menu,
+      };
+    }
 
   // =========================
   // UPDATE MENU
   // =========================
   async update(id: number, dto: UpdateMenuDto) {
-    const menu = await this.prisma.menu.findUnique({
-      where: { id },
-    });
-
-    if (!menu) {
-      throw new NotFoundException({
-        success: false,
-        message: 'Menu tidak ditemukan',
+      const menu = await this.prisma.menu.findUnique({
+        where: { id },
       });
+
+      if (!menu) {
+        throw new NotFoundException({
+          success: false,
+          message: 'Menu tidak ditemukan',
+        });
+      }
+
+      const updated = await this.prisma.menu.update({
+        where: { id },
+        data: {
+          name: dto.name,
+          price: dto.price,
+          description: dto.description,
+          image: dto.image,
+
+          // 🔥 RELASI CATEGORY
+          categoryId: dto.categoryId,
+        },
+      });
+
+      return {
+        success: true,
+        message: 'Menu berhasil diperbarui',
+        data: updated,
+      };
     }
-
-    const updated = await this.prisma.menu.update({
-      where: { id },
-      data: {
-        name: dto.name,
-        price: dto.price,
-        description: dto.description,
-        image: dto.image,
-
-        // 🔥 RELASI CATEGORY
-        categoryId: dto.categoryId,
-      },
-    });
-
-    return {
-      success: true,
-      message: 'Menu berhasil diperbarui',
-      data: updated,
-    };
-  }
 
   // =========================
   // DELETE MENU
   // =========================
   async remove(id: number) {
-    const menu = await this.prisma.menu.findUnique({
-      where: { id },
-    });
-
-    if (!menu) {
-      throw new NotFoundException({
-        success: false,
-        message: 'Menu tidak ditemukan',
+      const menu = await this.prisma.menu.findUnique({
+        where: { id },
       });
+
+      if (!menu) {
+        throw new NotFoundException({
+          success: false,
+          message: 'Menu tidak ditemukan',
+        });
+      }
+
+      await this.prisma.menu.delete({
+        where: { id },
+      });
+
+      return {
+        success: true,
+        message: 'Menu berhasil dihapus',
+      };
     }
-
-    await this.prisma.menu.delete({
-      where: { id },
-    });
-
-    return {
-      success: true,
-      message: 'Menu berhasil dihapus',
-    };
   }
-}
