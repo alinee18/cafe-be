@@ -31,7 +31,6 @@ export class OrderController {
     @Req() req: any, 
     @Body() dto: { items: { menuId: number; qty: number }[]; reservationId?: number } // 🔥 Tambahkan reservationId? di sini
   ) {
-    // 🔥 Alirkan parameter dto.reservationId ke dalam service sebagai argumen ketiga
     return this.orderService.createOrder(req.user.id, dto.items, dto.reservationId);
   }
 
