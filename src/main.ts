@@ -11,25 +11,33 @@ import { AuthService } from './auth/auth.service';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
-  const app =
-    await NestFactory.create(AppModule);
+  console.log('Aplikasi mulai bootstrap...');
+  
+  const app = await NestFactory.create(AppModule);
+  console.log('NestFactory berhasil dibuat');
 
   // =========================
   // GLOBAL PREFIX
   // =========================
   app.setGlobalPrefix('api');
+  console.log('Global prefix set to /api');
 
   // =========================
   // SWAGGER CONFIGURATION
   // =========================
-  const config = new DocumentBuilder()
-    .setTitle('Cafe Backend API')
-    .setDescription('The Cafe Management System API description')
-    .setVersion('1.0')
-    .addBearerAuth() // Memungkinkan testing endpoint yang diproteksi JWT
-    .build();
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('docs', app, document);
+  try {
+    const config = new DocumentBuilder()
+      .setTitle('Cafe Backend API')
+      .setDescription('The Cafe Management System API description')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('docs', app, document);
+    console.log('Swagger berhasil dikonfigurasi di /docs');
+  } catch (e) {
+    console.log('Error saat setup Swagger:', e.message);
+  }
 
   // =========================
   // CORS
@@ -37,6 +45,7 @@ async function bootstrap() {
   app.enableCors({
     origin: '*',
   });
+  console.log('CORS diaktifkan');
 
   // =========================
   // VALIDATION
@@ -44,33 +53,33 @@ async function bootstrap() {
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
-
       forbidNonWhitelisted: true,
-
       transform: true,
     }),
   );
+  console.log('Validation Pipe diaktifkan');
 
   // =========================
   // PORT
   // =========================
-  const PORT =
-    process.env.PORT || 3000;
+  const PORT = process.env.PORT || 3000;
+  console.log(`Mencoba listen di port: ${PORT}`);
 
-  await app.listen(PORT, '0.0.0.0');
-
-  console.log(
-    `Application running on port ${PORT}`,
-  );
+  try {
+    await app.listen(PORT, '0.0.0.0');
+    console.log(`🚀 Application running on port ${PORT}`);
+  } catch (e) {
+    console.log('FATAL ERROR saat app.listen:', e.message);
+  }
 
   // =========================
   // CREATE DEFAULT ADMINS
-  // JALANKAN SETELAH LISTEN AGAR TIDAK BLOCKING STARTUP
   // =========================
+  console.log('Menjalankan pengecekan admin di background...');
   const authService = app.get(AuthService);
   authService.createAdmin()
-    .then(() => console.log('Proses pengecekan default admin selesai'))
-    .catch((error) => console.log('Gagal menjalankan createAdmin startup:', error));
+    .then(() => console.log('✅ Proses default admin selesai'))
+    .catch((error) => console.log('❌ Gagal createAdmin:', error.message));
 }
 
-bootstrap();
+bootstrap().catch(err => console.log('BOOTSTRAP ERROR:', err.message));
