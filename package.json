@@ -6,7 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "npx prisma generate && nest build",
+    "build": "DATABASE_URL=mysql://localhost/temp prisma generate && nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "npx prisma migrate deploy && node dist/main.js",
     "start:dev": "nest start --watch",
