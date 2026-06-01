@@ -20,7 +20,9 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 
 import { Roles } from '../auth/decorators/roles.decorator';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Menu')
 @Controller('menu')
 export class MenuController {
   constructor(
@@ -31,6 +33,8 @@ export class MenuController {
   // CREATE MENU
   // ADMIN ONLY
   // =========================
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Tambah menu baru (Admin Only)' })
   @UseGuards(
     JwtAuthGuard,
     RolesGuard,
@@ -45,6 +49,7 @@ export class MenuController {
   // GET ALL MENU
   // PUBLIC
   // =========================
+  @ApiOperation({ summary: 'Ambil semua data menu' })
   @Get()
   findAll() {
     return this.menuService.findAll();
@@ -54,6 +59,7 @@ export class MenuController {
   // GET MENU BY ID
   // PUBLIC
   // =========================
+  @ApiOperation({ summary: 'Ambil detail menu berdasarkan ID' })
   @Get(':id')
   findOne(
     @Param('id', ParseIntPipe) id: number,
@@ -65,6 +71,8 @@ export class MenuController {
   // UPDATE MENU
   // ADMIN ONLY
   // =========================
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update data menu (Admin Only)' })
   @UseGuards(
     JwtAuthGuard,
     RolesGuard,
@@ -82,6 +90,8 @@ export class MenuController {
   // DELETE MENU
   // ADMIN ONLY
   // =========================
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Hapus menu (Admin Only)' })
   @UseGuards(
     JwtAuthGuard,
     RolesGuard,
