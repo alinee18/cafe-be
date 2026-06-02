@@ -52,15 +52,15 @@ export class MenuController {
       }),
     }),
   )
-  create(
-    @Body() dto: CreateMenuDto,
-    @UploadedFile() file: Express.Multer.File,
-  ) {
-    return this.menuService.create({
-      ...dto,
-      image: file ? file.filename : undefined,
-    });
-  }
+ create(
+  @Body() dto: CreateMenuDto,
+  @UploadedFile() file: Express.Multer.File,
+) {
+  return this.menuService.create({
+    ...dto,
+    image: file ? file.filename : undefined,
+  });
+}
 
   // =========================
   // GET ALL MENU

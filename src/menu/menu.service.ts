@@ -89,30 +89,30 @@ export class MenuService {
   // UPDATE MENU
   // =========================
   async update(id: number, dto: UpdateMenuDto) {
-    try {
-      const updated = await this.prisma.menu.update({
-        where: { id },
-        data: {
-          name: dto.name,
-          price: dto.price,
-          description: dto.description,
-          image: dto.image,
-          categoryId: dto.categoryId,
-        },
-      });
+  try {
+    const updated = await this.prisma.menu.update({
+      where: { id },
+      data: {
+        name: dto.name,
+        price: dto.price,
+        description: dto.description,
+        image: dto.image ?? undefined,
+        categoryId: dto.categoryId,
+      },
+    });
 
-      return {
-        success: true,
-        message: 'Menu berhasil diupdate',
-        data: updated,
-      };
-    } catch (error) {
-      throw new NotFoundException({
-        success: false,
-        message: 'Menu tidak ditemukan',
-      });
-    }
+    return {
+      success: true,
+      message: 'Menu berhasil diupdate',
+      data: updated,
+    };
+  } catch {
+    throw new NotFoundException({
+      success: false,
+      message: 'Menu tidak ditemukan',
+    });
   }
+}
 
   // =========================
   // DELETE MENU

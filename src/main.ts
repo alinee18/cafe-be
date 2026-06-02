@@ -22,6 +22,11 @@ async function bootstrap() {
     prefix: '/uploads/',
   });
 
+  // 🔥 FIX TAMBAHAN WAJIB (AMAN UNTUK PATH ABSOLUTE / RAILWAY)
+  app.useStaticAssets(join(process.cwd(), 'uploads'), {
+    prefix: '/uploads/',
+  });
+
   // =========================
   // SWAGGER CONFIGURATION
   // =========================
