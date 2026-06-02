@@ -1,3 +1,4 @@
+import { Type } from 'class-transformer';
 import {
   IsInt,
   IsOptional,
@@ -11,6 +12,7 @@ export class UpdateMenuDto {
   name?: string;
 
   @IsOptional()
+  @Type(() => Number)
   @IsInt({ message: 'Harga harus angka' })
   @Min(1, { message: 'Harga minimal 1' })
   price?: number;
@@ -23,8 +25,8 @@ export class UpdateMenuDto {
   @IsString()
   image?: string;
 
-  // 🔥 TAMBAH INI BIAR UPDATE RELASI BISA
   @IsOptional()
+  @Type(() => Number)
   @IsInt({ message: 'CategoryId harus angka' })
   categoryId?: number;
 }

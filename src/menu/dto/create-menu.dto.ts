@@ -1,3 +1,4 @@
+import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import {
   IsInt,
@@ -14,22 +15,24 @@ export class CreateMenuDto {
   name!: string;
 
   @ApiProperty({ example: 15000 })
+  @Type(() => Number)
   @IsInt({ message: 'Harga harus angka' })
   @Min(1, { message: 'Harga minimal 1' })
   price!: number;
 
-  @ApiProperty({ example: 'Nasi goreng spesial dengan telur', required: false })
+  @ApiProperty({ example: 'Nasi goreng spesial', required: false })
   @IsOptional()
   @IsString()
   description?: string;
 
-  @ApiProperty({ example: 'https://image.com/nasi-goreng.jpg', required: false })
+  @ApiProperty({ example: 'image.jpg', required: false })
   @IsOptional()
   @IsString()
   image?: string;
 
   @ApiProperty({ example: 1, required: false })
   @IsOptional()
+  @Type(() => Number)
   @IsInt({ message: 'CategoryId harus angka' })
   categoryId?: number;
 }
