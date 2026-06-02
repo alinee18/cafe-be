@@ -1,5 +1,5 @@
 import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
-import { Type } from 'class-transformer'; // <--- PASTIKAN INI DI-IMPORT!
+import { Type } from 'class-transformer'; // <--- Wajib di-import
 
 export class CreateMenuDto {
   @IsNotEmpty()
@@ -8,7 +8,7 @@ export class CreateMenuDto {
 
   @IsNotEmpty()
   @IsNumber()
-  @Type(() => Number) // <--- Tambahkan ini agar teks "20000" otomatis lolos sebagai angka
+  @Type(() => Number) // <--- Mengubah string "20000" menjadi angka 20000 sebelum divalidasi
   price!: number;
 
   @IsOptional()
@@ -21,6 +21,6 @@ export class CreateMenuDto {
 
   @IsOptional()
   @IsNumber()
-  @Type(() => Number) // <--- Tambahkan ini juga untuk categoryId
+  @Type(() => Number) // <--- Mengubah string "1" menjadi angka 1 sebelum divalidasi
   categoryId?: number;
 }
