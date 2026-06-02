@@ -32,10 +32,11 @@ export class MenuService {
         message: 'Menu berhasil ditambahkan',
         data: menu,
       };
-    } catch (error) {
+    } catch (error: any) { // <--- TAMBAHKAN BERKAH ': any' DI SINI
       throw new InternalServerErrorException({
         success: false,
-        message: 'Gagal menambahkan menu',
+        message: error.message || 'Gagal menambahkan menu',
+        errorDetails: error,
       });
     }
   }
