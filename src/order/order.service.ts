@@ -204,76 +204,68 @@ export class OrderService {
   }
 
   // =========================================================
-  // 5. PROSES BAYAR ORDER (Mengubah status JADI PAID & catat Payment)
-  // =========================================================
-  async payOrder(orderId: number, method: 'QRIS' | 'CASH') {
-    try {
-      const order = await this.prisma.order.findUnique({
-        where: { id: orderId },
-      });
+// 5. PILIH METODE PEMBAYARAN
+// Customer hanya memilih metode pembayaran
+// Konfirmasi pembayaran dilakukan Admin/Kasir
+// =========================================================
+async payOrder(orderId: number, method: 'QRIS' | 'CASH') {
+  try {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+    });
 
-      if (!order) {
-        throw new NotFoundException({
-          success: false,
-          message: 'Nomor nota pesanan (Order ID) tidak ditemukan.',
-        });
-      }
-
-      // Kunci pembayaran jika statusnya sudah lunas
-      if (order.status === OrderStatus.PAID) {
-        throw new BadRequestException({
-          success: false,
-          message: 'Pesanan ini sudah lunas, tidak bisa melakukan pembayaran ulang.',
-        });
-      }
-
-      // Cari atau buat data pembayaran (Upsert logika manual)
-      const existingPayment = await this.prisma.payment.findUnique({
-        where: { orderId },
-      });
-
-      if (!existingPayment) {
-        await this.prisma.payment.create({
-          data: {
-            orderId,
-            method,
-            amount: order.totalPrice,
-            status: 'PAID',
-            paidAt: new Date(),
-          },
-        });
-      } else {
-        await this.prisma.payment.update({
-          where: { orderId },
-          data: {
-            method,
-            status: 'PAID',
-            paidAt: new Date(),
-          },
-        });
-      }
-
-      // Ubah status order utama menjadi lunas (PAID)
-      const updatedOrder = await this.prisma.order.update({
-        where: { id: orderId },
-        data: {
-          status: OrderStatus.PAID,
-        },
-      });
-
-      return {
-        success: true,
-        message: `Pembayaran nota #${orderId} sukses menggunakan ${method}!`,
-        data: updatedOrder,
-      };
-    } catch (error) {
-      if (error instanceof BadRequestException || error instanceof NotFoundException) {
-        throw error;
-      }
-      throw new InternalServerErrorException({
+    if (!order) {
+      throw new NotFoundException({
         success: false,
-        message: 'Terjadi kegagalan sistem saat memproses transaksi pembayaran.',
+        message:
+          'Pesanan yang ingin dibayar tidak ditemukan.',
       });
     }
+
+    const existingPayment = await this.prisma.payment.findUnique({
+      where: { orderId },
+    });
+
+    if (existingPayment) {
+      throw new BadRequestException({
+        success: false,
+        message:
+          'Metode pembayaran untuk pesanan ini sudah dipilih sebelumnya.',
+      });
+    }
+
+    await this.prisma.payment.create({
+      data: {
+        orderId,
+        method,
+        amount: order.totalPrice,
+        status: 'PENDING',
+      },
+    });
+
+    return {
+      success: true,
+      message: `Metode pembayaran ${method} berhasil dipilih. Silakan lakukan pembayaran ke kasir dan tunggu konfirmasi.`,
+      data: {
+        orderId,
+        totalPrice: order.totalPrice,
+        method,
+        paymentStatus: 'PENDING',
+      },
+    };
+  } catch (error) {
+    if (
+      error instanceof BadRequestException ||
+      error instanceof NotFoundException
+    ) {
+      throw error;
+    }
+
+    throw new InternalServerErrorException({
+      success: false,
+      message:
+        'Terjadi kesalahan pada sistem saat memproses pembayaran.',
+    });
   }
+}
 }
