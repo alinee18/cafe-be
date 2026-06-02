@@ -1,13 +1,15 @@
 import {
-  Body,
   Controller,
-  Delete,
   Get,
+  Post,
+  Patch,
+  Delete,
+  Body,
   Param,
   ParseIntPipe,
-  Patch,
-  Post,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
 
 import { MenuService } from './menu.service';
@@ -18,60 +20,68 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiTags,
-} from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+
+import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 
 @ApiTags('Menu')
 @Controller('menu')
 export class MenuController {
-  constructor(
-    private readonly menuService: MenuService,
-  ) {}
+  constructor(private readonly menuService: MenuService) {}
 
   // =========================
-  // CREATE MENU
-  // ADMIN ONLY
+  // CREATE MENU (UPLOAD IMAGE)
   // =========================
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Tambah menu baru (Admin Only)' })
+  @ApiOperation({ summary: 'Tambah menu (Admin Only)' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Post()
-  create(@Body() dto: CreateMenuDto) {
-    return this.menuService.create(dto);
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: diskStorage({
+        destination: './uploads',
+        filename: (req, file, cb) => {
+          const uniqueName =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+
+          cb(null, uniqueName + extname(file.originalname));
+        },
+      }),
+    }),
+  )
+  create(
+    @Body() dto: CreateMenuDto,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.menuService.create({
+      ...dto,
+      image: file ? file.filename : null,
+    });
   }
 
   // =========================
   // GET ALL MENU
-  // PUBLIC
   // =========================
-  @ApiOperation({ summary: 'Ambil semua menu' })
   @Get()
   findAll() {
     return this.menuService.findAll();
   }
 
   // =========================
-  // GET MENU BY ID
-  // PUBLIC
+  // GET BY ID
   // =========================
-  @ApiOperation({ summary: 'Ambil detail menu berdasarkan ID' })
   @Get(':id')
-  findOne(
-    @Param('id', ParseIntPipe) id: number,
-  ) {
+  findOne(@Param('id', ParseIntPipe) id: number) {
     return this.menuService.findOne(id);
   }
 
   // =========================
-  // UPDATE MENU
-  // ADMIN ONLY
+  // UPDATE MENU (NO IMAGE FIXED SIMPLE)
   // =========================
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update menu (Admin Only)' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Patch(':id')
@@ -84,16 +94,12 @@ export class MenuController {
 
   // =========================
   // DELETE MENU
-  // ADMIN ONLY
   // =========================
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Hapus menu (Admin Only)' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Delete(':id')
-  remove(
-    @Param('id', ParseIntPipe) id: number,
-  ) {
+  remove(@Param('id', ParseIntPipe) id: number) {
     return this.menuService.remove(id);
   }
 }

@@ -20,9 +20,9 @@ export class MenuService {
       const menu = await this.prisma.menu.create({
         data: {
           name: dto.name,
-          price: dto.price,
+          price: Number(dto.price),
           description: dto.description,
-          image: dto.image,
+          image: dto.image, // filename dari upload
           categoryId: dto.categoryId,
         },
       });
@@ -32,9 +32,8 @@ export class MenuService {
         message: 'Menu berhasil ditambahkan',
         data: menu,
       };
-    } catch (error: any) {
-      console.error('CREATE MENU ERROR:', error);
-
+    } catch (error) {
+      console.error(error);
       throw new InternalServerErrorException({
         success: false,
         message: 'Gagal menambahkan menu',
@@ -43,14 +42,12 @@ export class MenuService {
   }
 
   // =========================
-  // GET ALL MENU
+  // GET ALL
   // =========================
   async findAll() {
     try {
       const menus = await this.prisma.menu.findMany({
-        include: {
-          category: true,
-        },
+        include: { category: true },
       });
 
       return {
@@ -58,135 +55,85 @@ export class MenuService {
         message: 'Daftar menu berhasil diambil',
         data: menus,
       };
-    } catch (error: any) {
-      console.error('GET ALL MENU ERROR:', error);
-
+    } catch (error) {
       throw new InternalServerErrorException({
         success: false,
-        message: 'Gagal mengambil daftar menu',
+        message: 'Gagal mengambil menu',
       });
     }
   }
 
   // =========================
-  // GET MENU BY ID
+  // GET BY ID
   // =========================
   async findOne(id: number) {
-    try {
-      const menu = await this.prisma.menu.findUnique({
-        where: { id },
-        include: {
-          category: true,
-        },
-      });
+    const menu = await this.prisma.menu.findUnique({
+      where: { id },
+      include: { category: true },
+    });
 
-      if (!menu) {
-        throw new NotFoundException({
-          success: false,
-          message: `Menu dengan ID ${id} tidak ditemukan`,
-        });
-      }
-
-      return {
-        success: true,
-        message: 'Detail menu berhasil diambil',
-        data: menu,
-      };
-    } catch (error: any) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-
-      console.error('GET MENU DETAIL ERROR:', error);
-
-      throw new InternalServerErrorException({
+    if (!menu) {
+      throw new NotFoundException({
         success: false,
-        message: 'Gagal mengambil detail menu',
+        message: 'Menu tidak ditemukan',
       });
     }
+
+    return {
+      success: true,
+      data: menu,
+    };
   }
 
   // =========================
-  // UPDATE MENU
+  // UPDATE
   // =========================
   async update(id: number, dto: UpdateMenuDto) {
-    try {
-      const menu = await this.prisma.menu.findUnique({
-        where: { id },
-      });
+    const menu = await this.prisma.menu.findUnique({ where: { id } });
 
-      if (!menu) {
-        throw new NotFoundException({
-          success: false,
-          message: `Menu dengan ID ${id} tidak ditemukan`,
-        });
-      }
-
-      const updated = await this.prisma.menu.update({
-        where: { id },
-        data: {
-          name: dto.name,
-          price: dto.price,
-          description: dto.description,
-          image: dto.image,
-          categoryId: dto.categoryId,
-        },
-      });
-
-      return {
-        success: true,
-        message: 'Menu berhasil diperbarui',
-        data: updated,
-      };
-    } catch (error: any) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-
-      console.error('UPDATE MENU ERROR:', error);
-
-      throw new InternalServerErrorException({
+    if (!menu) {
+      throw new NotFoundException({
         success: false,
-        message: 'Gagal memperbarui menu',
+        message: 'Menu tidak ditemukan',
       });
     }
+
+    const updated = await this.prisma.menu.update({
+      where: { id },
+      data: {
+        name: dto.name,
+        price: dto.price,
+        description: dto.description,
+        image: dto.image,
+        categoryId: dto.categoryId,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Menu berhasil diupdate',
+      data: updated,
+    };
   }
 
   // =========================
-  // DELETE MENU
+  // DELETE
   // =========================
   async remove(id: number) {
-    try {
-      const menu = await this.prisma.menu.findUnique({
-        where: { id },
-      });
+    const menu = await this.prisma.menu.findUnique({ where: { id } });
 
-      if (!menu) {
-        throw new NotFoundException({
-          success: false,
-          message: `Menu dengan ID ${id} tidak ditemukan`,
-        });
-      }
-
-      await this.prisma.menu.delete({
-        where: { id },
-      });
-
-      return {
-        success: true,
-        message: 'Menu berhasil dihapus',
-      };
-    } catch (error: any) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-
-      console.error('DELETE MENU ERROR:', error);
-
-      throw new InternalServerErrorException({
+    if (!menu) {
+      throw new NotFoundException({
         success: false,
-        message: 'Gagal menghapus menu',
+        message: 'Menu tidak ditemukan',
       });
     }
+
+    await this.prisma.menu.delete({ where: { id } });
+
+    return {
+      success: true,
+      message: 'Menu berhasil dihapus',
+    };
   }
 }
