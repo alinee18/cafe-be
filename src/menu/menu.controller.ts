@@ -28,23 +28,23 @@ import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 export class MenuController {
   constructor(private readonly menuService: MenuService) {}
 
-  // =========================
-  // CREATE MENU (UPLOAD IMAGE)
-  // =========================
+  // ==========================================
+  // 1. TAMBAH MENU (CREATE)
+  // ==========================================
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Tambah menu (Admin Only)' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Post()
-  @UseInterceptors(FileInterceptor('image')) // Simpan di memori RAM sementara
+  @UseInterceptors(FileInterceptor('image'))
   create(
     @Body() dto: CreateMenuDto,
-    @UploadedFile() file: any, // <--- Diubah jadi 'any' agar bebas error Namespace Multer
+    @UploadedFile() file: any,
   ) {
     const payload: any = {
       ...dto,
       price: dto.price ? Number(dto.price) : 0,
-      image: file ? file.originalname : undefined,
+      image: file ? file.originalname : dto.image || undefined, // Fleksibel bisa file / teks URL
     };
 
     if (dto.categoryId) {
@@ -54,36 +54,56 @@ export class MenuController {
     return this.menuService.create(payload as CreateMenuDto);
   }
 
-  // =========================
-  // GET ALL MENU
-  // =========================
+  // ==========================================
+  // 2. AMBIL SEMUA MENU (GET ALL)
+  // ==========================================
   @Get()
   findAll() {
     return this.menuService.findAll();
   }
 
-  // =========================
-  // GET BY ID
-  // =========================
+  // ==========================================
+  // 3. AMBIL MENU BERDASARKAN ID (GET BY ID)
+  // ==========================================
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.menuService.findOne(id);
   }
 
-  // =========================
-  // UPDATE MENU
-  // =========================
+  // ==========================================
+  // 4. UBAH DATA MENU (UPDATE)
+  // ==========================================
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Patch(':id')
+  @UseInterceptors(FileInterceptor('image')) // Diaktifkan agar bisa memproses field image di form-data
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateMenuDto,
+    @UploadedFile() file: any, // Ditambahkan interceptor file di sini
   ) {
+    // Logika Pintar: 
+    // 1. Kalau ada upload file baru -> pakai nama file asli (file.originalname)
+    // 2. Kalau ga ada file baru tapi di form-data ada teks URL -> pakai teks URL-nya (dto.image)
+    // 3. Kalau dua-duanya kosong -> jangan diubah (undefined)
+    // GANTI BARIS 90 SAMPAI 95 DENGAN KODE INI:
+    let imageValue: string | undefined = undefined;
+
+    if (file) {
+      imageValue = file.originalname;
+    } else if (dto.image) {
+      imageValue = dto.image;
+    }
+
     const payload: any = {
       ...dto,
     };
+
+    // Masukkan hasil penentuan gambar tadi ke dalam payload jika ada perubahan
+    if (imageValue !== undefined) {
+      payload.image = imageValue;
+    }
 
     if (dto.price) {
       payload.price = Number(dto.price);
@@ -96,9 +116,9 @@ export class MenuController {
     return this.menuService.update(id, payload as UpdateMenuDto);
   }
 
-  // =========================
-  // DELETE MENU
-  // =========================
+  // ==========================================
+  // 5. HAPUS MENU (DELETE)
+  // ==========================================
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
