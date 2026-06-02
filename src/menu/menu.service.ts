@@ -18,14 +18,14 @@ export class MenuService {
   async create(dto: CreateMenuDto) {
     try {
       const menu = await this.prisma.menu.create({
-        data: {
-          name: dto.name,
-          price: Number(dto.price),
-          description: dto.description,
-          image: dto.image, // filename dari upload
-          categoryId: dto.categoryId,
-        },
-      });
+  data: {
+    name: dto.name,
+    price: Number(dto.price),
+    description: dto.description || null,
+    image: dto.image || null,
+    categoryId: dto.categoryId || null,
+  },
+});
 
       return {
         success: true,
