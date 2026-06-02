@@ -10,7 +10,7 @@ import { UpdateMenuDto } from './dto/update-menu.dto';
 
 @Injectable()
 export class MenuService {
-  constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService) {}
 
   // =========================
   // CREATE MENU
@@ -23,8 +23,6 @@ export class MenuService {
           price: dto.price,
           description: dto.description,
           image: dto.image,
-
-          // 🔥 RELASI CATEGORY
           categoryId: dto.categoryId,
         },
       });
@@ -34,10 +32,12 @@ export class MenuService {
         message: 'Menu berhasil ditambahkan',
         data: menu,
       };
-    } catch (error) {
+    } catch (error: any) {
+      console.error('CREATE MENU ERROR:', error);
+
       throw new InternalServerErrorException({
         success: false,
-        message: 'Terjadi kesalahan saat menambahkan menu',
+        message: 'Gagal menambahkan menu',
       });
     }
   }
@@ -47,16 +47,23 @@ export class MenuService {
   // =========================
   async findAll() {
     try {
-      const menus = await this.prisma.menu.findMany();
+      const menus = await this.prisma.menu.findMany({
+        include: {
+          category: true,
+        },
+      });
 
       return {
         success: true,
+        message: 'Daftar menu berhasil diambil',
         data: menus,
       };
-    } catch (error) {
+    } catch (error: any) {
+      console.error('GET ALL MENU ERROR:', error);
+
       throw new InternalServerErrorException({
         success: false,
-        message: `Terjadi kesalahan saat mengambil daftar menu: ${error}`,
+        message: 'Gagal mengambil daftar menu',
       });
     }
   }
@@ -65,6 +72,7 @@ export class MenuService {
   // GET MENU BY ID
   // =========================
   async findOne(id: number) {
+    try {
       const menu = await this.prisma.menu.findUnique({
         where: { id },
         include: {
@@ -75,20 +83,34 @@ export class MenuService {
       if (!menu) {
         throw new NotFoundException({
           success: false,
-          message: 'Menu tidak ditemukan',
+          message: `Menu dengan ID ${id} tidak ditemukan`,
         });
       }
 
       return {
         success: true,
+        message: 'Detail menu berhasil diambil',
         data: menu,
       };
+    } catch (error: any) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+
+      console.error('GET MENU DETAIL ERROR:', error);
+
+      throw new InternalServerErrorException({
+        success: false,
+        message: 'Gagal mengambil detail menu',
+      });
     }
+  }
 
   // =========================
   // UPDATE MENU
   // =========================
   async update(id: number, dto: UpdateMenuDto) {
+    try {
       const menu = await this.prisma.menu.findUnique({
         where: { id },
       });
@@ -96,7 +118,7 @@ export class MenuService {
       if (!menu) {
         throw new NotFoundException({
           success: false,
-          message: 'Menu tidak ditemukan',
+          message: `Menu dengan ID ${id} tidak ditemukan`,
         });
       }
 
@@ -107,8 +129,6 @@ export class MenuService {
           price: dto.price,
           description: dto.description,
           image: dto.image,
-
-          // 🔥 RELASI CATEGORY
           categoryId: dto.categoryId,
         },
       });
@@ -118,12 +138,25 @@ export class MenuService {
         message: 'Menu berhasil diperbarui',
         data: updated,
       };
+    } catch (error: any) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+
+      console.error('UPDATE MENU ERROR:', error);
+
+      throw new InternalServerErrorException({
+        success: false,
+        message: 'Gagal memperbarui menu',
+      });
     }
+  }
 
   // =========================
   // DELETE MENU
   // =========================
   async remove(id: number) {
+    try {
       const menu = await this.prisma.menu.findUnique({
         where: { id },
       });
@@ -131,7 +164,7 @@ export class MenuService {
       if (!menu) {
         throw new NotFoundException({
           success: false,
-          message: 'Menu tidak ditemukan',
+          message: `Menu dengan ID ${id} tidak ditemukan`,
         });
       }
 
@@ -143,5 +176,17 @@ export class MenuService {
         success: true,
         message: 'Menu berhasil dihapus',
       };
+    } catch (error: any) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+
+      console.error('DELETE MENU ERROR:', error);
+
+      throw new InternalServerErrorException({
+        success: false,
+        message: 'Gagal menghapus menu',
+      });
     }
   }
+}
