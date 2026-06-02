@@ -21,9 +21,6 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
-
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 
 @ApiTags('Menu')
@@ -39,28 +36,23 @@ export class MenuController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Post()
-  @UseInterceptors(
-    FileInterceptor('image', {
-      storage: diskStorage({
-        destination: './uploads',
-        filename: (req, file, cb) => {
-          const uniqueName =
-            Date.now() + '-' + Math.round(Math.random() * 1e9);
+  @UseInterceptors(FileInterceptor('image')) // Simpan di memori RAM sementara
+  create(
+    @Body() dto: CreateMenuDto,
+    @UploadedFile() file: any, // <--- Diubah jadi 'any' agar bebas error Namespace Multer
+  ) {
+    const payload: any = {
+      ...dto,
+      price: dto.price ? Number(dto.price) : 0,
+      image: file ? file.originalname : undefined,
+    };
 
-          cb(null, uniqueName + extname(file.originalname));
-        },
-      }),
-    }),
-  )
- create(
-  @Body() dto: CreateMenuDto,
-  @UploadedFile() file: Express.Multer.File,
-) {
-  return this.menuService.create({
-    ...dto,
-    image: file ? file.filename : undefined,
-  });
-}
+    if (dto.categoryId) {
+      payload.categoryId = Number(dto.categoryId);
+    }
+
+    return this.menuService.create(payload as CreateMenuDto);
+  }
 
   // =========================
   // GET ALL MENU
@@ -79,7 +71,7 @@ export class MenuController {
   }
 
   // =========================
-  // UPDATE MENU (NO IMAGE FIXED SIMPLE)
+  // UPDATE MENU
   // =========================
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -89,7 +81,19 @@ export class MenuController {
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateMenuDto,
   ) {
-    return this.menuService.update(id, dto);
+    const payload: any = {
+      ...dto,
+    };
+
+    if (dto.price) {
+      payload.price = Number(dto.price);
+    }
+
+    if (dto.categoryId) {
+      payload.categoryId = Number(dto.categoryId);
+    }
+
+    return this.menuService.update(id, payload as UpdateMenuDto);
   }
 
   // =========================
