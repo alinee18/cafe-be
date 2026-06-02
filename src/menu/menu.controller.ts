@@ -58,7 +58,7 @@ export class MenuController {
   ) {
     return this.menuService.create({
       ...dto,
-      image: file ? file.filename : null,
+      image: file ? file.filename : undefined,
     });
   }
 
