@@ -89,7 +89,7 @@ model Order {
   payment Payment?
 
   reservationId Int?         
-  reservation   Reservation? @relation(fields: [reservationId], references: [id])
+  reservation   Reservation? @relation(fields: [reservationId], references: [id], onDelete: Cascade)
 }
 //
 // =========================

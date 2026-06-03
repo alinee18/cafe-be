@@ -9,27 +9,16 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // =========================
-  // GLOBAL PREFIX
-  // =========================
   app.setGlobalPrefix('api');
 
-  // =========================
-  // STATIC FILES (UPLOAD GAMBAR)
-  // =========================
-  // 👉 INI YANG KAMU BUTUH
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
     prefix: '/uploads/',
   });
 
-  // 🔥 FIX TAMBAHAN WAJIB (AMAN UNTUK PATH ABSOLUTE / RAILWAY)
   app.useStaticAssets(join(process.cwd(), 'uploads'), {
     prefix: '/uploads/',
   });
-
-  // =========================
-  // SWAGGER CONFIGURATION
-  // =========================
+  
   const config = new DocumentBuilder()
     .setTitle('Cafe Backend API')
     .setDescription('The Cafe Management System API description')
@@ -43,17 +32,12 @@ async function bootstrap() {
     useGlobalPrefix: false,
   });
 
-  // =========================
-  // CORS
-  // =========================
   app.enableCors({
     origin: '*',
     credentials: true,
   });
 
-  // =========================
-  // VALIDATION
-  // =========================
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -62,9 +46,6 @@ async function bootstrap() {
     }),
   );
 
-  // =========================
-  // PORT (Railway safe)
-  // =========================
   const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
   await app.listen(PORT, '0.0.0.0');
@@ -73,9 +54,6 @@ async function bootstrap() {
     `🚀 Application is successfully listening on host 0.0.0.0 and port ${PORT}`,
   );
 
-  // =========================
-  // CREATE DEFAULT ADMINS
-  // =========================
   const authService = app.get(AuthService);
   authService
     .createAdmin()

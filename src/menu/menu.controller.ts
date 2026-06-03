@@ -44,7 +44,7 @@ export class MenuController {
     const payload: any = {
       ...dto,
       price: dto.price ? Number(dto.price) : 0,
-      image: file ? file.originalname : dto.image || undefined, // Fleksibel bisa file / teks URL
+      image: file ? file.originalname : dto.image || undefined, 
     };
 
     if (dto.categoryId) {
@@ -83,11 +83,6 @@ export class MenuController {
     @Body() dto: UpdateMenuDto,
     @UploadedFile() file: any, // Ditambahkan interceptor file di sini
   ) {
-    // Logika Pintar: 
-    // 1. Kalau ada upload file baru -> pakai nama file asli (file.originalname)
-    // 2. Kalau ga ada file baru tapi di form-data ada teks URL -> pakai teks URL-nya (dto.image)
-    // 3. Kalau dua-duanya kosong -> jangan diubah (undefined)
-    // GANTI BARIS 90 SAMPAI 95 DENGAN KODE INI:
     let imageValue: string | undefined = undefined;
 
     if (file) {
