@@ -23,7 +23,7 @@ export class MenuService {
           price: dto.price,
           description: dto.description ?? null,
           image: dto.image ?? null,
-          categoryId: dto.categoryId ?? null,
+          categoryId: dto.categoryId ?? null, // Mengizinkan kosong jika tidak diisi
         },
       });
 
@@ -42,12 +42,11 @@ export class MenuService {
   }
 
   // ==========================================
-  // 2. AMBIL SEMUA MENU (GET ALL) + SINKRONISASI DATA KOTOR
+  // 2. AMBIL SEMUA MENU (GET ALL) + AUTO CLEAN DATABASE
   // ==========================================
   async findAll() {
     try {
-      // 🟢 TRICK SEMENTARA: Paksa semua data image yang masih string kotor menjadi null
-      // Ini akan langsung membersihkan row di database Railway kamu saat API GET dipanggil
+      // 🟢 TRICK AUTO-CLEAN: Mengubah semua nama gambar kotor menjadi null di Railway secara massal
       await this.prisma.menu.updateMany({
         where: {
           image: { not: null },
@@ -58,12 +57,12 @@ export class MenuService {
       });
 
       const menus = await this.prisma.menu.findMany({
-        include: { category: true },
+        include: { category: true }, // Menampilkan info detail kategori pendukungnya
       });
 
       return {
         success: true,
-        message: 'Daftar menu berhasil diambil (Database telah dibersihkan)',
+        message: 'Daftar menu berhasil diambil (Database kotor telah dibersihkan)',
         data: menus,
       };
     } catch (error: any) {
@@ -85,6 +84,7 @@ export class MenuService {
         include: { category: true },
       });
 
+      // Jika menu dengan ID tersebut tidak ada di database
       if (!menu) {
         throw new NotFoundException({
           success: false,
@@ -113,6 +113,7 @@ export class MenuService {
   // ==========================================
   async update(id: number, dto: UpdateMenuDto) {
     try {
+      // Langkah 1: Pastikan dulu menunya beneran ada sebelum di-update
       const cekMenu = await this.prisma.menu.findUnique({ where: { id } });
       if (!cekMenu) {
         throw new NotFoundException({
@@ -121,14 +122,15 @@ export class MenuService {
         });
       }
 
+      // Langkah 2: Lakukan eksekusi update data
       const updated = await this.prisma.menu.update({
         where: { id },
         data: {
           name: dto.name,
-          price: dto.price ? Number(dto.price) : undefined,
+          price: dto.price ? Number(dto.price) : undefined, // Dipastikan aman menjadi angka
           description: dto.description,
           image: dto.image ?? undefined,
-          categoryId: dto.categoryId ? Number(dto.categoryId) : undefined,
+          categoryId: dto.categoryId ? Number(dto.categoryId) : undefined, // Dipastikan aman menjadi angka
         },
       });
 
@@ -153,6 +155,7 @@ export class MenuService {
   // ==========================================
   async remove(id: number) {
     try {
+      // Langkah 1: Pastikan menunya beneran ada sebelum di-delete
       const cekMenu = await this.prisma.menu.findUnique({ where: { id } });
       if (!cekMenu) {
         throw new NotFoundException({
@@ -161,6 +164,7 @@ export class MenuService {
         });
       }
 
+      // Langkah 2: Lakukan eksekusi delete data
       await this.prisma.menu.delete({
         where: { id },
       });
