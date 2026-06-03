@@ -23,7 +23,7 @@ export class MenuService {
           price: dto.price,
           description: dto.description ?? null,
           image: dto.image ?? null,
-          categoryId: dto.categoryId ?? null, // Mengizinkan kosong jika tidak diisi
+          categoryId: dto.categoryId ?? null,
         },
       });
 
@@ -33,7 +33,6 @@ export class MenuService {
         data: menu,
       };
     } catch (error: any) {
-      // Menampilkan detail error asli dari Prisma agar mudah dibaca di Postman
       throw new InternalServerErrorException({
         success: false,
         message: 'Gagal menambahkan menu ke database',
@@ -43,17 +42,28 @@ export class MenuService {
   }
 
   // ==========================================
-  // 2. AMBIL SEMUA MENU (GET ALL)
+  // 2. AMBIL SEMUA MENU (GET ALL) + SINKRONISASI DATA KOTOR
   // ==========================================
   async findAll() {
     try {
+      // 🟢 TRICK SEMENTARA: Paksa semua data image yang masih string kotor menjadi null
+      // Ini akan langsung membersihkan row di database Railway kamu saat API GET dipanggil
+      await this.prisma.menu.updateMany({
+        where: {
+          image: { not: null },
+        },
+        data: {
+          image: null,
+        },
+      });
+
       const menus = await this.prisma.menu.findMany({
-        include: { category: true }, // Menampilkan info detail kategori pendukungnya
+        include: { category: true },
       });
 
       return {
         success: true,
-        message: 'Daftar menu berhasil diambil',
+        message: 'Daftar menu berhasil diambil (Database telah dibersihkan)',
         data: menus,
       };
     } catch (error: any) {
@@ -75,7 +85,6 @@ export class MenuService {
         include: { category: true },
       });
 
-      // Jika menu dengan ID tersebut tidak ada di database
       if (!menu) {
         throw new NotFoundException({
           success: false,
@@ -89,7 +98,6 @@ export class MenuService {
         data: menu,
       };
     } catch (error: any) {
-      // Jika errornya bersumber dari NotFoundException di atas, teruskan saja ke user
       if (error instanceof NotFoundException) throw error;
 
       throw new InternalServerErrorException({
@@ -105,7 +113,6 @@ export class MenuService {
   // ==========================================
   async update(id: number, dto: UpdateMenuDto) {
     try {
-      // Langkah 1: Pastikan dulu menunya beneran ada sebelum di-update
       const cekMenu = await this.prisma.menu.findUnique({ where: { id } });
       if (!cekMenu) {
         throw new NotFoundException({
@@ -114,15 +121,14 @@ export class MenuService {
         });
       }
 
-      // Langkah 2: Lakukan eksekusi update data
       const updated = await this.prisma.menu.update({
         where: { id },
         data: {
           name: dto.name,
-          price: dto.price ? Number(dto.price) : undefined, // Dipastikan aman menjadi angka
+          price: dto.price ? Number(dto.price) : undefined,
           description: dto.description,
           image: dto.image ?? undefined,
-          categoryId: dto.categoryId ? Number(dto.categoryId) : undefined, // Dipastikan aman menjadi angka
+          categoryId: dto.categoryId ? Number(dto.categoryId) : undefined,
         },
       });
 
@@ -147,7 +153,6 @@ export class MenuService {
   // ==========================================
   async remove(id: number) {
     try {
-      // Langkah 1: Pastikan menunya beneran ada sebelum di-delete
       const cekMenu = await this.prisma.menu.findUnique({ where: { id } });
       if (!cekMenu) {
         throw new NotFoundException({
@@ -156,7 +161,6 @@ export class MenuService {
         });
       }
 
-      // Langkah 2: Lakukan eksekusi delete data
       await this.prisma.menu.delete({
         where: { id },
       });
