@@ -109,7 +109,7 @@ model OrderItem {
 
   order Order @relation(fields: [orderId], references: [id])
 
-  menu Menu @relation(fields: [menuId], references: [id])
+  menu Menu @relation(fields: [menuId], references: [id], onDelete: Cascade)
 }
 
 model Table {
